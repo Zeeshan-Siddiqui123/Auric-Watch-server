@@ -1,7 +1,7 @@
 // models/Order.js
 const mongoose = require("mongoose")
 
-mongoose.connect('mongodb://127.0.0.1:27017/ecommerce')
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/ecommerce');
 
 
 const orderSchema = new mongoose.Schema({
