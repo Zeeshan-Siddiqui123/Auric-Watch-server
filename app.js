@@ -19,7 +19,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: ["http://localhost:5173", "https://auric-watch.vercel.app/" , "http://localhost:5174"],
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }))
 
@@ -111,7 +111,7 @@ app.get('/api/profile/:userId', async (req, res) => {
   res.json({
     user: {
       name: user.name,
-      image: `https://auric-watch-server.vercel.app/images/uploads/${user.file}`
+      image: `http://localhost:3000/images/uploads/${user.file}`
     }
   });
 });
