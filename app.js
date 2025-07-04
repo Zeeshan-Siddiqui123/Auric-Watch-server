@@ -10,6 +10,8 @@ const path = require("path")
 const upload = require("./config/multerconfig")
 const Order = require("./models/Order")
 const mongoose = require('mongoose')
+const contactMessage = require("./controllers/contactform")
+const sendOtp = require("./controllers/sendotp")
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -17,7 +19,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: ["http://localhost:5173", "https://auric-watch.vercel.app/" , "http://localhost:5174"],
   credentials: true
 }))
 
@@ -38,20 +40,61 @@ app.post('/register', upload.single('file'), async (req, res) => {
     }
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
     const user = await userModel.create({
       username, 
       name, 
       email, 
       file: req.file?.filename || '', 
-      password: hash
+      password: hash,
+      otp, 
+      otpExpires
     });
-    console.log(user.json);
-    res.status(201).json({ message: 'User registered successfully' });
+    await sendOtp( email, otp );
+    res.status(201).json({ message: "OTP sent to email. Please verify to complete registration." });
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ message: 'Server Error', error });
   }
 });
+
+app.post('/verify-otp', async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+  
+      const user = await userModel.findOne({ email });
+  
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+  
+      if (user.isVerified) {
+        return res.status(400).json({ message: "User already verified" });
+      }
+  
+      if (user.otp !== otp) {
+        return res.status(400).json({ message: "Invalid OTP" });
+      }
+  
+      if (user.otpExpires < new Date()) {
+        return res.status(400).json({ message: "OTP has expired" });
+      }
+  
+      user.isVerified = true;
+      user.otp = null;
+      user.otpExpires = null;
+      await user.save();
+  
+      res.status(200).json({ message: "Account verified successfully" });
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      res.status(500).json({ message: "Server error", error });
+    }
+  });
+  
+
+app.get('/mail', sendOtp)
 
 app.get('/getusers', async (req, res) => {
   try {
@@ -68,7 +111,7 @@ app.get('/api/profile/:userId', async (req, res) => {
   res.json({
     user: {
       name: user.name,
-      image: `http://localhost:3000/images/uploads/${user.file}`
+      image: `https://auric-watch-server.vercel.app/images/uploads/${user.file}`
     }
   });
 });
@@ -225,12 +268,34 @@ app.get('/related/:category/:productId', async (req, res) => {
   }
 });
 
-app.get('/orders', async (req, res) => {
+app.post('/contact', async (req, res) => {
   try {
-    const orders = await Order.find().populate('user', 'name email');
-    res.json(orders);
+    await contactMessage(req.body);
+    res.status(200).json({ message: 'Message sent successfully!' });
   } catch (err) {
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: 'Failed to send message' });
+  }
+});
+
+app.get('/orders/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const orders = await Order.find({ userId }).sort({ createdAt: -1 });
+    res.status(200).json(orders);
+  } catch (err) {
+    console.error('Error fetching orders:', err);
+    res.status(500).json({ message: 'Server error while fetching orders' });
+  }
+});
+
+app.get('/admin/orders', async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.status(200).json(orders);
+  } catch (err) {
+    console.error('Admin: Error fetching all orders:', err);
+    res.status(500).json({ message: 'Failed to fetch orders' });
   }
 });
 
