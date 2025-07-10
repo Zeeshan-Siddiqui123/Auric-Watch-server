@@ -10,8 +10,8 @@ const path = require("path")
 const upload = require("./config/multerconfig")
 const Order = require("./models/Order")
 const mongoose = require('mongoose')
-const contactMessage = require("./controllers/contactform")
 const sendOtp = require("./controllers/sendotp")
+const contactform = require("./controllers/contactform")
 const { registerSchema } = require("./validators/authvalidations")
 
 app.use(express.json())
@@ -20,7 +20,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: ["http://localhost:5173" , "http://localhost:5174"],
   credentials: true
 }))
 
@@ -291,7 +291,7 @@ app.get('/related/:category/:productId', async (req, res) => {
 
 app.post('/contact', async (req, res) => {
   try {
-    await contactMessage(req.body);
+    await contactform(req.body);
     res.status(200).json({ message: 'Message sent successfully!' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to send message' });
