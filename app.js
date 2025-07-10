@@ -9,10 +9,20 @@ const bcrypt = require("bcrypt")
 const path = require("path")
 const upload = require("./config/multerconfig")
 const Order = require("./models/Order")
-const mongoose = require('mongoose')
 const sendOtp = require("./controllers/sendotp")
 const contactform = require("./controllers/contactform")
 const { registerSchema } = require("./validators/authvalidations")
+require('dotenv').config();
+const mongoose = require('mongoose');
+
+mongoose
+  .connect('mongodb://127.0.0.1:27017/ecommerce' && process.env.MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -20,7 +30,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: ["http://localhost:5173" , "http://localhost:5174"],
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }))
 
@@ -132,7 +142,7 @@ app.get('/api/profile/:userId', async (req, res) => {
   res.json({
     user: {
       name: user.name,
-      image: `http://localhost:3000/images/uploads/${user.file}`
+      image: `https://auric-watch-server.vercel.app/images/uploads/${user.file}`
     }
   });
 });
