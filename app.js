@@ -30,7 +30,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: ["https://auric-watch.vercel.app", "http://localhost:5174"],
+  origin: ["https://auric-watch.vercel.app", "https://auric-admin.vercel.app/"],
   credentials: true
 }))
 
