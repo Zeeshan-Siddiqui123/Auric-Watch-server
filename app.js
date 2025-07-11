@@ -142,7 +142,7 @@ app.get('/api/profile/:userId', async (req, res) => {
   res.json({
     user: {
       name: user.name,
-      image: `https://auric-watch-server.vercel.app/images/uploads/${user.file}`
+      image: `https://auric-watch-server.onrender.com/images/uploads/${user.file}`
     }
   });
 });
