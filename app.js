@@ -16,7 +16,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 mongoose
-  .connect('mongodb://127.0.0.1:27017/ecommerce' && process.env.MONGO_URL, {
+  .connect(process.env.MONGO_URL, {
     useNewUrlParser: true,
     useUnifiedTopology: true
   })
@@ -30,7 +30,7 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: ["https://auric-watch.vercel.app", "http://localhost:5174"],
   credentials: true
 }))
 
