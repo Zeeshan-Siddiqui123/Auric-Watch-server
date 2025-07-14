@@ -29,7 +29,6 @@ mongoose
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, "public")))
-app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
   origin: [process.env.CLIENT_URL, process.env.ADMIN_URL, 'http://localhost:5173'],
