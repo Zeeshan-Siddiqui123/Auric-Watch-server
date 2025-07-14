@@ -7,13 +7,15 @@ const cors = require('cors')
 const jwt = require('jsonwebtoken')
 const bcrypt = require("bcrypt")
 const path = require("path")
-const upload = require("./config/multerconfig")
 const Order = require("./models/Order")
 const sendOtp = require("./controllers/sendotp")
 const contactform = require("./controllers/contactform")
 const { registerSchema } = require("./validators/authvalidations")
 require('dotenv').config();
 const mongoose = require('mongoose');
+const multer = require('multer');
+const { storage } = require('./config/cloudinary');
+const upload = multer({ storage });
 
 mongoose
   .connect(process.env.MONGO_URL, {
@@ -30,9 +32,9 @@ app.use(express.static(path.join(__dirname, "public")))
 app.use("/images/uploads", express.static(path.join(__dirname, "public/images/uploads")));
 app.use(cookieParser())
 app.use(cors({
-  origin: [process.env.CLIENT_URL, process.env.ADMIN_URL],
+  origin: [process.env.CLIENT_URL, process.env.ADMIN_URL, 'http://localhost:5173'],
   credentials: true
-}))
+}));
 
 app.get("/", (req, res) => {
   res.send("Hi, I am a Server")
@@ -74,7 +76,7 @@ app.post('/register', upload.single('file'), async (req, res) => {
       name,
       email,
       password: hash,
-      file: req.file?.filename || '',
+      file: req.file?.path || '', // ✅ Cloudinary image URL
       otp,
       otpExpires
     });
@@ -91,39 +93,39 @@ app.post('/register', upload.single('file'), async (req, res) => {
 });
 
 app.post('/verify-otp', async (req, res) => {
-    try {
-      const { email, otp } = req.body;
-  
-      const user = await userModel.findOne({ email });
-  
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-  
-      if (user.isVerified) {
-        return res.status(400).json({ message: "User already verified" });
-      }
-  
-      if (user.otp !== otp) {
-        return res.status(400).json({ message: "Invalid OTP" });
-      }
-  
-      if (user.otpExpires < new Date()) {
-        return res.status(400).json({ message: "OTP has expired" });
-      }
-  
-      user.isVerified = true;
-      user.otp = null;
-      user.otpExpires = null;
-      await user.save();
-  
-      res.status(200).json({ message: "Account verified successfully" });
-    } catch (error) {
-      console.error("OTP verification error:", error);
-      res.status(500).json({ message: "Server error", error });
+  try {
+    const { email, otp } = req.body;
+
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-  });
-  
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: "User already verified" });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpires < new Date()) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+
+    user.isVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Account verified successfully" });
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
 
 app.get('/mail', sendOtp)
 
@@ -142,7 +144,7 @@ app.get('/api/profile/:userId', async (req, res) => {
   res.json({
     user: {
       name: user.name,
-      image: `https://auric-watch-server.onrender.com/images/uploads/${user.file}`
+      image: user.file || '',
     }
   });
 });
@@ -180,7 +182,7 @@ app.delete('/api/cart/:userId', async (req, res) => {
   try {
     const user = await userModel.findById(req.params.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    user.cart = []; 
+    user.cart = [];
     await user.save();
     res.status(200).json({ message: 'Cart cleared successfully' });
   } catch (err) {
@@ -212,22 +214,28 @@ app.post('/login', async (req, res) => {
 })
 
 app.post('/logout', (req, res) => {
-  res.clearCookie('token'); 
+  res.clearCookie('token');
   res.status(200).json({ message: 'Logged out successfully' });
 });
 
 app.post('/products', upload.single('file'), async (req, res) => {
   try {
-    const { title, price, description, category } = req.body
+    const { title, price, description, category } = req.body;
+
     const product = await productModel.create({
-      title, price, description, category, file: req.file?.filename || ''
-    })
-    res.status(201).json({ message: 'Product registered successfully' });
+      title,
+      price,
+      description,
+      category,
+      file: req.file?.path || '', // ✅ Cloudinary URL
+    });
+
+    res.status(201).json({ message: 'Product registered successfully', product });
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ message: 'Server Error', error });
   }
-})
+});
 
 app.get('/getproducts', async (req, res) => {
   try {
@@ -245,7 +253,7 @@ app.get("/getproduct/:id", async (req, res) => {
 
 app.get('/products/category', async (req, res) => {
   try {
-    const categoryName = req.query.name; 
+    const categoryName = req.query.name;
     const products = await productModel.find({ category: categoryName });
     res.status(200).json(products);
   } catch (error) {
