@@ -42,7 +42,6 @@ app.get("/", (req, res) => {
 app.post('/register', upload.single('file'), async (req, res) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
-
     if (!parsed.success) {
       const firstError = parsed.error.errors[0].message;
       return res.status(400).json({ message: firstError });
@@ -50,7 +49,6 @@ app.post('/register', upload.single('file'), async (req, res) => {
 
     const { name, username, email, password } = parsed.data;
 
-    // Check existing user
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'This Email is Already Registered' });
@@ -61,28 +59,23 @@ app.post('/register', upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'This Username is not available, please try another' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
 
-    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // valid for 5 min
 
-    // Create user
     const user = await userModel.create({
       username,
       name,
       email,
       password: hash,
-      file: req.file?.path || '', // ✅ Cloudinary image URL
+      file: req.file?.path || '',
       otp,
       otpExpires
     });
 
-    // Send OTP
     await sendOtp(email, otp);
-
     res.status(201).json({ message: "OTP sent to email. Please verify to complete registration." });
 
   } catch (error) {
@@ -125,8 +118,31 @@ app.post('/verify-otp', async (req, res) => {
   }
 });
 
-
 app.get('/mail', sendOtp)
+
+app.post('/resend-otp', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isVerified) return res.status(400).json({ message: "User already verified" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    await sendOtp(email, otp);
+    res.status(200).json({ message: "OTP resent to your email." });
+
+  } catch (error) {
+    console.error("Resend OTP error:", error);
+    res.status(500).json({ message: "Server error while resending OTP." });
+  }
+});
 
 app.get('/getusers', async (req, res) => {
   try {
