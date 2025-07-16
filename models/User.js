@@ -1,17 +1,15 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
-
-
-const userSchema = mongoose.Schema({
-    username: String,
-    name: String,
-    email: String,
-    password: String,
-    file: {
-        type: String,
-        default: 'default.png'
-    },
-    cart: [
+const userSchema = new mongoose.Schema({
+  username: String,
+  name: String,
+  email: String,
+  password: String,
+  file: {
+    type: String,
+    default: 'default.png'
+  },
+  cart: [
     {
       id: String,
       title: String,
@@ -19,7 +17,19 @@ const userSchema = mongoose.Schema({
       quantity: Number,
       file: String,
     }
-  ]
-})
+  ],
+  otp: {
+    type: String,
+    default: null
+  },
+  otpExpires: {
+    type: Date,
+    default: null
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  }
+});
 
-module.exports = mongoose.model('user', userSchema)
+module.exports = mongoose.model('user', userSchema);
